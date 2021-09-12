@@ -68,7 +68,7 @@ async function pullComments() {
                 }
             }
             if (validReplies.length == 0) {                    //and none match script
-                console.warn('multiple replies - none match script');
+                console.warn('multiple replies - none match script - id: ' + lastComment.id);
                 moreComments = false;
             } else if (validReplies.length == 1) {             //and one matches script
                 lastComment = validReplies[0];
