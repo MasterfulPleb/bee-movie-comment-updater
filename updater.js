@@ -24,10 +24,10 @@ async function main() {
     lastCommentID = await conn.query('SELECT ID ' +
         'FROM comments ORDER BY timestamp DESC LIMIT 1;');
     lastCommentID = lastCommentID[0].ID;
-    configureScript();
+    await configureScript();
     pullComments();
 }
-function configureScript() {
+async function configureScript() {
     script = script.script;
     var arr = await conn.query('SELECT body FROM comments;');
     for (let i = 0; i < arr.length; i++) {
@@ -102,7 +102,7 @@ async function pullComments() {
         }
     }
     lastCommentID = lastComment.id;
-    //setTimeout(pullComments, 10000);
+    setTimeout(pullComments, 10000);
 }
 function errorCheck(letter) {
     if (script.slice(0, 1) == letter) noError = true;
