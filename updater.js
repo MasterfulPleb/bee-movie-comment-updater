@@ -61,15 +61,10 @@ async function pullComments() {
             }
         } else {                                             //if multiple replies
             var validReplies = [];
-            console.log('validReplies ' + validReplies);
             for (let reply of lastComment.replies) {
-                console.log('reply.body.length ' + reply.body.length);
                 if (reply.body.length == 1) {    //if one character
-                    console.log('reply.body ' + reply.body);
                     errorCheck(reply.body);          //and matches script
-                    console.log('noError ' + noError);
                     if (noError) validReplies.push(reply);//add to validReplies
-                    console.log('validReplies ' + validReplies);
                 }
             }
             if (validReplies.length == 0) {                    //and none match script
@@ -80,14 +75,22 @@ async function pullComments() {
                 await pushToDB(lastComment);
                 moreComments = lastComment.replies.length > 0;
             } else {                                           //and multiple match the script
+                console.log('validReplies ' + validReplies);
                 var temp = validReplies;////////////////////////////////////////////////////////////////
+                console.log('temp ' + temp);
                 validReplies = [];
+                console.log('validReplies ' + validReplies);
                 for (let reply of temp) {   //check replies of replies for valid replies
+                    console.log('reply.replies.length ' + reply.replies.length);
                     if (reply.replies.length > 0) {
                         for (let replyReply of reply.replies) {
+                            console.log('replyReply.body.length ' + replyReply.body.length);
                             if (replyReply.body.length == 1) {    //if one character
+                                console.log('replyReply.body ' + replyReply.body);
                                 errorCheck(replyReply.body);          //and matches script
+                                console.log('noError ' + noError);
                                 if (noError) validReplies.push(reply);   //add parent to validReplies
+                                console.log('validReplies ' + validReplies);
                             }
                         }
                     }
