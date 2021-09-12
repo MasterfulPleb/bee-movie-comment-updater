@@ -41,7 +41,7 @@ async function pullComments() {
     /** @type {Promise<snoowrap.Comment>} */
     var lastComment = await r.getComment(lastCommentID).expandReplies({limit: 10, depth: 1});
     var moreComments = lastComment.replies.length > 0;
-    if (!moreComments) console.warn('no more comments');
+    if (!moreComments) console.log('no more comments');
     debugger;
     while (moreComments) {
         if (lastComment.replies.length == 1) {               //if only one reply
@@ -77,6 +77,9 @@ async function pullComments() {
             } else {                                           //and multiple match the script
                 var temp = validReplies;
                 validReplies = [];
+                console.log('validReplies');
+                console.log(validReplies[0]);//////////////////////////////////////////////////////////////////////////////////////
+                console.log(validReplies[1]);
                 for (let reply of temp) {   //check replies of replies for valid replies
                     if (reply.replies.length > 0) {
                         for (let replyReply of reply.replies) {
