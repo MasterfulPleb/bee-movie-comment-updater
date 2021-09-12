@@ -46,7 +46,7 @@ async function pullComments() {
     while (moreComments) {
         if (lastComment.replies.length == 1) {               //if only one reply
             if (lastComment.replies[0].body.length == 1) {     //if that one reply is a single character
-                errorCheck(lastComment.replies[0].body);
+                errorCheck(lastComment.replies[0].body, 0);
                 if (noError) {                                   //if that character matches the script
                     lastComment = lastComment.replies[0];
                     await pushToDB(lastComment);
@@ -63,7 +63,7 @@ async function pullComments() {
             var validReplies = [];
             for (let reply of lastComment.replies) {
                 if (reply.body.length == 1) {    //if one character
-                    errorCheck(reply.body);          //and matches script
+                    errorCheck(reply.body, 0);          //and matches script
                     if (noError) validReplies.push(reply);//add to validReplies
                 }
             }
@@ -75,27 +75,19 @@ async function pullComments() {
                 await pushToDB(lastComment);
                 moreComments = lastComment.replies.length > 0;
             } else {                                           //and multiple match the script
-                console.log('validReplies ' + validReplies);
-                var temp = validReplies;////////////////////////////////////////////////////////////////
-                console.log('temp ' + temp);
+                var temp = validReplies;
                 validReplies = [];
-                console.log('validReplies ' + validReplies);
                 for (let reply of temp) {   //check replies of replies for valid replies
-                    console.log('reply.replies.length ' + reply.replies.length);
                     if (reply.replies.length > 0) {
                         for (let replyReply of reply.replies) {
-                            console.log('replyReply.body.length ' + replyReply.body.length);
                             if (replyReply.body.length == 1) {    //if one character
-                                console.log('replyReply.body ' + replyReply.body);
-                                errorCheck(replyReply.body);          //and matches script
-                                console.log('noError ' + noError);
+                                errorCheck(replyReply.body, 1);          //and matches script
                                 if (noError) validReplies.push(reply);   //add parent to validReplies
-                                console.log('validReplies ' + validReplies);
                             }
                         }
                     }
                 }
-                if (validReplies.length == 0) {////////////////////////////////////////////////////////
+                if (validReplies.length == 0) {
                     console.warn('multiple valid replies - no valid reply replies');
                     moreComments = false;
                 } else if (validReplies.length > 1) {
@@ -112,8 +104,8 @@ async function pullComments() {
     lastCommentID = lastComment.id;
     setTimeout(pullComments, 10000);
 }
-function errorCheck(letter) {
-    if (script.slice(0, 1) == letter) noError = true;
+function errorCheck(letter, depth) {
+    if (script.slice(depth, depth + 1) == letter) noError = true;
     else noError = false;
 }
 async function pushToDB(c) {
