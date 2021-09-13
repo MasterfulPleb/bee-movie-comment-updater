@@ -48,9 +48,25 @@ async function pullComments() {
             if (lastComment.replies[0].body.length == 1) {     //if that one reply is a single character
                 errorCheck(lastComment.replies[0].body, 0);
                 if (noError) {                                   //if that character matches the script
-                    lastComment = lastComment.replies[0];
-                    await pushToDB(lastComment);
-                    moreComments = lastComment.replies.length > 0;
+                    if (lastComment.replies[0].replies.length > 0) {          //check for valid replies
+                        var validReply = false;
+                        for (let replyReply of lastComment.replies[0].replies) {
+                            if (replyReply.body.length == 1) {                  //if one character
+                                errorCheck(replyReply.body, 1);                   //and matches script
+                                if (noError) validReply = true;                     //mark parent as valid
+                            }
+                        }
+                        if (validReply) {                                     //if there is a valid reply
+                            lastComment = lastComment.replies[0];               //push comment to db
+                            await pushToDB(lastComment);
+                        } else {                                              //if there is no valid reply
+                            console.log('one reply - single character - character matches script - waiting for valid reply');
+                            moreComments = false;
+                        }
+                    } else {                    
+                        console.log('one reply - single character - character matches script - waiting for replies');
+                        moreComments = false;
+                    }
                 } else {                                         //if that character does not match the script
                     console.warn('one reply - single character - character does not match script');
                     moreComments = false;
@@ -63,8 +79,8 @@ async function pullComments() {
             var validReplies = [];
             for (let reply of lastComment.replies) {
                 if (reply.body.length == 1) {    //if one character
-                    errorCheck(reply.body, 0);          //and matches script
-                    if (noError) validReplies.push(reply);//add to validReplies
+                    errorCheck(reply.body, 0);        //and matches script
+                    if (noError) validReplies.push(reply);//add parent to validReplies
                 }
             }
             if (validReplies.length == 0) {                    //and none match script
@@ -77,9 +93,6 @@ async function pullComments() {
             } else {                                           //and multiple match the script
                 var temp = validReplies;
                 validReplies = [];
-                console.log('validReplies');
-                console.log(validReplies[0]);//////////////////////////////////////////////////////////////////////////////////////
-                console.log(validReplies[1]);
                 for (let reply of temp) {   //check replies of replies for valid replies
                     if (reply.replies.length > 0) {
                         for (let replyReply of reply.replies) {
@@ -99,7 +112,6 @@ async function pullComments() {
                 } else {
                     lastComment = validReplies[0];
                     await pushToDB(lastComment);
-                    moreComments = true;
                 }
             }
         }
@@ -124,3 +136,5 @@ async function pushToDB(c) {
             throw console.error('sql INSERT query error')
         });
 }
+
+//WILL CRASH IF COMMENT IS ADDED TO DATABASE THEN DELETED
