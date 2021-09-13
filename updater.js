@@ -43,6 +43,7 @@ async function pullComments() {
     var moreComments = lastComment.replies.length > 0;
     if (!moreComments) console.log('no more comments');
     debugger;
+    var noRestart = false
     while (moreComments) {
         if (lastComment.replies.length == 1) {               //if only one reply
             if (lastComment.replies[0].body.length == 1) {     //if that one reply is a single character
@@ -108,7 +109,7 @@ async function pullComments() {
                     moreComments = false;
                 } else if (validReplies.length > 1) {
                     console.error('multiple valid replies - multiple valid reply replies');
-                    clearInterval(pullComments);
+                    noRestart = true
                 } else {
                     lastComment = validReplies[0];
                     await pushToDB(lastComment);
@@ -117,7 +118,7 @@ async function pullComments() {
         }
     }
     lastCommentID = lastComment.id;
-    setTimeout(pullComments, 10000);
+    if (!noRestart) setTimeout(pullComments, 10000);
 }
 function errorCheck(letter, depth) {
     if (script.slice(depth, depth + 1) == letter) noError = true;
@@ -137,4 +138,4 @@ async function pushToDB(c) {
         });
 }
 
-//WILL CRASH IF COMMENT IS ADDED TO DATABASE THEN DELETED
+//MIGHT CRASH IF COMMENT IS ADDED TO DATABASE THEN DELETED
