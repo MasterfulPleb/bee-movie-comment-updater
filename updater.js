@@ -109,7 +109,8 @@ async function pullComments() {
                     moreComments = false;
                 } else if (validReplies.length > 1) {
                     console.error('multiple valid replies - multiple valid reply replies');
-                    noRestart = true
+                    noRestart = true;
+                    moreComments = false;
                 } else {
                     lastComment = validReplies[0];
                     await pushToDB(lastComment);
