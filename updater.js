@@ -2,6 +2,7 @@
 const mariadb = require('mariadb');
 const snoowrap = require('snoowrap');
 const login = require('./login.json');
+const fs = require('fs/promises')
 
 var script = require('./script.json');
 var written = '';
@@ -128,6 +129,8 @@ function errorCheck(letter, depth) {
 async function pushToDB(c) {
     written += script.slice(0, 1);
     script = script.slice(1);
+    await fs.writeFile('./remaining.txt', script)
+    await fs.writeFile('./written.txt', written)
     console.log('pushing comment to DB... ' + c.body);
     return conn.query('INSERT INTO comments ' +
             '(ID,body,author,timestamp,parentID,permalink,edited,OP,awards)' +
@@ -138,5 +141,3 @@ async function pushToDB(c) {
             throw console.error('sql INSERT query error')
         });
 }
-
-//MIGHT CRASH IF COMMENT IS ADDED TO DATABASE THEN DELETED
