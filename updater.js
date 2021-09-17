@@ -39,89 +39,94 @@ async function configureScript() {
     }
 }
 async function pullComments() {
-    /** @type {Promise<snoowrap.Comment>} */
-    var lastComment = await r.getComment(lastCommentID).expandReplies({limit: 10, depth: 1});
-    var moreComments = lastComment.replies.length > 0;
-    if (!moreComments) console.log('no more comments');
-    debugger;
-    var noRestart = false
-    while (moreComments) {
-        if (lastComment.replies.length == 1) {               //if only one reply
-            if (lastComment.replies[0].body.trim().length == 1) {     //if that one reply is a single character
-                errorCheck(lastComment.replies[0].body.trim(), 0);
-                if (noError) {                                   //if that character matches the script
-                    if (lastComment.replies[0].replies.length > 0) {          //check for valid replies
-                        var validReply = false;
-                        for (let replyReply of lastComment.replies[0].replies) {
-                            if (replyReply.body.trim().length == 1) {                  //if one character
-                                errorCheck(replyReply.body.trim(), 1);                   //and matches script
-                                if (noError) validReply = true;                     //mark parent as valid
+    try {
+        /** @type {Promise<snoowrap.Comment>} */
+        var lastComment = await r.getComment(lastCommentID).expandReplies({limit: 10, depth: 1});
+        var moreComments = lastComment.replies.length > 0;
+        if (!moreComments) console.log('no more comments');
+        debugger;
+        var noRestart = false
+        while (moreComments) {
+            if (lastComment.replies.length == 1) {               //if only one reply
+                if (lastComment.replies[0].body.trim().length == 1) {     //if that one reply is a single character
+                    errorCheck(lastComment.replies[0].body.trim(), 0);
+                    if (noError) {                                   //if that character matches the script
+                        if (lastComment.replies[0].replies.length > 0) {          //check for valid replies
+                            var validReply = false;
+                            for (let replyReply of lastComment.replies[0].replies) {
+                                if (replyReply.body.trim().length == 1) {                  //if one character
+                                    errorCheck(replyReply.body.trim(), 1);                   //and matches script
+                                    if (noError) validReply = true;                     //mark parent as valid
+                                }
                             }
-                        }
-                        if (validReply) {                                     //if there is a valid reply
-                            lastComment = lastComment.replies[0];               //push comment to db
-                            await pushToDB(lastComment);
-                        } else {                                              //if there is no valid reply
-                            console.log('one reply - single character - character matches script - waiting for valid reply');
-                            console.log(lastComment.replies[0].replies[0].body)
+                            if (validReply) {                                     //if there is a valid reply
+                                lastComment = lastComment.replies[0];               //push comment to db
+                                await pushToDB(lastComment);
+                            } else {                                              //if there is no valid reply
+                                console.log('one reply - single character - character matches script - waiting for valid reply');
+                                console.log(lastComment.replies[0].replies[0].body)
+                                moreComments = false;
+                            }
+                        } else {                    
+                            console.log('one reply - single character - character matches script - waiting for replies');
                             moreComments = false;
                         }
-                    } else {                    
-                        console.log('one reply - single character - character matches script - waiting for replies');
+                    } else {                                         //if that character does not match the script
+                        console.warn('one reply - single character - character does not match script');
                         moreComments = false;
                     }
-                } else {                                         //if that character does not match the script
-                    console.warn('one reply - single character - character does not match script');
+                } else {                                           //if that one reply is multiple characters
+                    console.warn('one reply - reply contains multiple characters');
                     moreComments = false;
                 }
-            } else {                                           //if that one reply is multiple characters
-                console.warn('one reply - reply contains multiple characters');
-                moreComments = false;
-            }
-        } else {                                             //if multiple replies
-            var validReplies = [];
-            for (let reply of lastComment.replies) {
-                if (reply.body.trim().length == 1) {    //if one character
-                    errorCheck(reply.body.trim(), 0);        //and matches script
-                    if (noError) validReplies.push(reply);//add parent to validReplies
+            } else {                                             //if multiple replies
+                var validReplies = [];
+                for (let reply of lastComment.replies) {
+                    if (reply.body.trim().length == 1) {    //if one character
+                        errorCheck(reply.body.trim(), 0);        //and matches script
+                        if (noError) validReplies.push(reply);//add parent to validReplies
+                    }
                 }
-            }
-            if (validReplies.length == 0) {                    //and none match script
-                console.warn('multiple replies - none match script - id: ' + lastComment.id);
-                moreComments = false;
-            } else if (validReplies.length == 1) {             //and one matches script
-                lastComment = validReplies[0];
-                await pushToDB(lastComment);
-                moreComments = lastComment.replies.length > 0;
-            } else {                                           //and multiple match the script
-                var temp = validReplies;
-                validReplies = [];
-                for (let reply of temp) {   //check replies of replies for valid replies
-                    if (reply.replies.length > 0) {
-                        for (let replyReply of reply.replies) {
-                            if (replyReply.body.trim().length == 1) {    //if one character
-                                errorCheck(replyReply.body.trim(), 1);          //and matches script
-                                if (noError) validReplies.push(reply);   //add parent to validReplies
+                if (validReplies.length == 0) {                    //and none match script
+                    console.warn('multiple replies - none match script - id: ' + lastComment.id);
+                    moreComments = false;
+                } else if (validReplies.length == 1) {             //and one matches script
+                    lastComment = validReplies[0];
+                    await pushToDB(lastComment);
+                    moreComments = lastComment.replies.length > 0;
+                } else {                                           //and multiple match the script
+                    var temp = validReplies;
+                    validReplies = [];
+                    for (let reply of temp) {   //check replies of replies for valid replies
+                        if (reply.replies.length > 0) {
+                            for (let replyReply of reply.replies) {
+                                if (replyReply.body.trim().length == 1) {    //if one character
+                                    errorCheck(replyReply.body.trim(), 1);          //and matches script
+                                    if (noError) validReplies.push(reply);   //add parent to validReplies
+                                }
                             }
                         }
                     }
-                }
-                if (validReplies.length == 0) {
-                    console.warn('multiple valid replies - no valid reply replies');
-                    moreComments = false;
-                } else if (validReplies.length > 1) {
-                    console.error('multiple valid replies - multiple valid reply replies');
-                    noRestart = true;
-                    moreComments = false;
-                } else {
-                    lastComment = validReplies[0];
-                    await pushToDB(lastComment);
+                    if (validReplies.length == 0) {
+                        console.warn('multiple valid replies - no valid reply replies');
+                        moreComments = false;
+                    } else if (validReplies.length > 1) {
+                        console.error('multiple valid replies - multiple valid reply replies');
+                        noRestart = true;
+                        moreComments = false;
+                    } else {
+                        lastComment = validReplies[0];
+                        await pushToDB(lastComment);
+                    }
                 }
             }
         }
+        lastCommentID = lastComment.id;
+    } catch (err) {
+        console.error(err)
+    } finally {
+        if (!noRestart) setTimeout(pullComments, 10000);
     }
-    lastCommentID = lastComment.id;
-    if (!noRestart) setTimeout(pullComments, 10000);
 }
 function errorCheck(letter, depth) {
     if (script.slice(depth, depth + 1) == letter) noError = true;
