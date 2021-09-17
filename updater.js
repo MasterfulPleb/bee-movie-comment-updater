@@ -135,7 +135,7 @@ async function pushToDB(c) {
     console.log('pushing comment to DB... ' + c.body);
     return conn.query('INSERT INTO comments ' +
             '(ID,body,author,timestamp,parentID,permalink,edited,OP,awards)' +
-            'VALUES("' + c.id + '","' + c.body + '","' + c.author.name + '",' +
+            'VALUES("' + c.id + '","' + c.body.trim() + '","' + c.author.name + '",' +
             c.created_utc + ',"' + c.parent_id.slice(3) + '","' + c.permalink + '",' +
             (c.edited > 0) + ',' + c.is_submitter + ',' + c.total_awards_received + ');')
         .catch(err => {
