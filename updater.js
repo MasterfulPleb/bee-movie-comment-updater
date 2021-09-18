@@ -5,17 +5,20 @@ const login = require('./login.json');
 const fs = require('fs/promises')
 
 var script = require('./script.json');
+const scriptCopy = script;
 var written = '';
 var lastCommentID = '';
 var noError = true;
+var errors = 0
 
-const r = new snoowrap(login);
-const pool = mariadb.createPool({
+var r = new snoowrap(login);
+var pool = mariadb.createPool({
     socketPath: '/var/run/mysqld/mysqld.sock',
     user: 'root',
     database: 'bee_movie',
     connectionLimit: 5,
 });
+/**@type {mariadb.PoolConnection} */
 var conn;
 
 main();
@@ -44,8 +47,7 @@ async function pullComments() {
         var lastComment = await r.getComment(lastCommentID).expandReplies({limit: 10, depth: 1});
         var moreComments = lastComment.replies.length > 0;
         if (!moreComments) console.log('no more comments');
-        debugger;
-        var noRestart = false
+        var restart = false;
         while (moreComments) {
             if (lastComment.replies.length == 1) {               //if only one reply
                 if (lastComment.replies[0].body.trim().length == 1) {     //if that one reply is a single character
@@ -65,18 +67,21 @@ async function pullComments() {
                             } else {                                              //if there is no valid reply
                                 console.log('one reply - single character - character matches script - waiting for valid reply');
                                 console.log(lastComment.replies[0].replies[0].body)
+                                errors++;
                                 moreComments = false;
                             }
-                        } else {                    
+                        } else {
                             console.log('one reply - single character - character matches script - waiting for replies');
                             moreComments = false;
                         }
                     } else {                                         //if that character does not match the script
                         console.warn('one reply - single character - character does not match script');
+                        errors++;
                         moreComments = false;
                     }
                 } else {                                           //if that one reply is multiple characters
                     console.warn('one reply - reply contains multiple characters');
+                    errors++;
                     moreComments = false;
                 }
             } else {                                             //if multiple replies
@@ -89,6 +94,7 @@ async function pullComments() {
                 }
                 if (validReplies.length == 0) {                    //and none match script
                     console.warn('multiple replies - none match script - id: ' + lastComment.id);
+                    errors++;
                     moreComments = false;
                 } else if (validReplies.length == 1) {             //and one matches script
                     lastComment = validReplies[0];
@@ -109,10 +115,11 @@ async function pullComments() {
                     }
                     if (validReplies.length == 0) {
                         console.warn('multiple valid replies - no valid reply replies');
+                        errors++;
                         moreComments = false;
                     } else if (validReplies.length > 1) {
                         console.error('multiple valid replies - multiple valid reply replies');
-                        noRestart = true;
+                        errors++;
                         moreComments = false;
                     } else {
                         lastComment = validReplies[0];
@@ -125,7 +132,9 @@ async function pullComments() {
     } catch (err) {
         console.error(err)
     } finally {
-        if (!noRestart) setTimeout(pullComments, 10000);
+        if (errors > 10) restart = true;
+        if (restart) softRestart();
+        else setTimeout(pullComments, 10000);
     }
 }
 function errorCheck(letter, depth) {
@@ -146,4 +155,13 @@ async function pushToDB(c) {
         .catch(err => {
             throw console.error('sql INSERT query error')
         });
+}
+async function softRestart() {
+    script = scriptCopy;
+    written = '';
+    lastCommentID = '';
+    errors = 0;
+    r = new snoowrap(login);
+    await conn.release();
+    main();
 }
