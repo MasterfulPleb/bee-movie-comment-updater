@@ -134,7 +134,7 @@ async function pullComments() {
     } finally {
         if (errors > 10) restart = true;
         if (restart) softRestart();
-        else setTimeout(pullComments, 2000);
+        else setTimeout(pullComments, 1200);
     }
 }
 function errorCheck(letter, depth) {
