@@ -2,14 +2,15 @@
 const mariadb = require('mariadb');
 const snoowrap = require('snoowrap');
 const login = require('./login.json');
-const fs = require('fs/promises')
+const fs = require('fs/promises');
 
 var script = require('./script.json');
 const scriptCopy = script;
 var written = '';
 var lastCommentID = '';
 var noError = true;
-var errors = 0
+var errors = 0;
+var sr = 0;
 
 var r = new snoowrap(login);
 var pool = mariadb.createPool({
@@ -38,7 +39,7 @@ async function configureScript() {
         if (script.slice(0, 1) == arr[i].body) {
             script = script.slice(1);
             written += arr[i].body;
-        } else throw console.error('error matching letters with script @ ' + i);
+        } else throw console.error('error matching letters with script @ ' + i)
     }
 }
 async function pullComments() {
@@ -65,22 +66,22 @@ async function pullComments() {
                                 lastComment = lastComment.replies[0];               //push comment to db
                                 await pushToDB(lastComment);
                             } else {                                              //if there is no valid reply
-                                console.log('one reply - single character - character matches script - waiting for valid reply');
+                                console.log(sr + ' one reply - single character - character matches script - waiting for valid reply');
                                 console.log(lastComment.replies[0].replies[0].body)
                                 errors++;
                                 moreComments = false;
                             }
                         } else {
-                            console.log('one reply - single character - character matches script - waiting for replies');
+                            console.log(sr + ' one reply - single character - character matches script - waiting for replies');
                             moreComments = false;
                         }
                     } else {                                         //if that character does not match the script
-                        console.warn('one reply - single character - character does not match script');
+                        console.warn(sr + ' one reply - single character - character does not match script');
                         errors++;
                         moreComments = false;
                     }
                 } else {                                           //if that one reply is multiple characters
-                    console.warn('one reply - reply contains multiple characters');
+                    console.warn(sr + ' one reply - reply contains multiple characters');
                     errors++;
                     moreComments = false;
                 }
@@ -93,7 +94,7 @@ async function pullComments() {
                     }
                 }
                 if (validReplies.length == 0) {                    //and none match script
-                    console.warn('multiple replies - none match script - id: ' + lastComment.id);
+                    console.warn(sr + ' multiple replies - none match script - id: ' + lastComment.id);
                     errors++;
                     moreComments = false;
                 } else if (validReplies.length == 1) {             //and one matches script
@@ -114,11 +115,11 @@ async function pullComments() {
                         }
                     }
                     if (validReplies.length == 0) {
-                        console.warn('multiple valid replies - no valid reply replies');
+                        console.warn(sr + ' multiple valid replies - no valid reply replies');
                         errors++;
                         moreComments = false;
                     } else if (validReplies.length > 1) {
-                        console.error('multiple valid replies - multiple valid reply replies');
+                        console.error(sr + ' multiple valid replies - multiple valid reply replies');
                         errors++;
                         moreComments = false;
                     } else {
@@ -130,7 +131,7 @@ async function pullComments() {
         }
         lastCommentID = lastComment.id;
     } catch (err) {
-        console.error(err)
+        console.error(err);
     } finally {
         if (errors > 10) restart = true;
         if (restart) softRestart();
@@ -144,8 +145,8 @@ function errorCheck(letter, depth) {
 async function pushToDB(c) {
     written += script.slice(0, 1);
     script = script.slice(1);
-    await fs.writeFile('./remaining.txt', script)
-    await fs.writeFile('./written.txt', written)
+    await fs.writeFile('./remaining.txt', script);
+    await fs.writeFile('./written.txt', written);
     console.log('pushing comment to DB... ' + c.body);
     return conn.query('INSERT INTO comments ' +
             '(ID,body,author,timestamp,parentID,permalink,edited,OP,awards)' +
@@ -157,11 +158,13 @@ async function pushToDB(c) {
         });
 }
 async function softRestart() {
+    sr++;
+    console.log(sr + ' soft restarting...');
     script = scriptCopy;
     written = '';
     lastCommentID = '';
     errors = 0;
     r = new snoowrap(login);
     await conn.release();
-    main();
+    setTimeout(main(), 60000);
 }
