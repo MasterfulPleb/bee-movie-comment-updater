@@ -47,7 +47,10 @@ async function pullComments() {
         /** @type {Promise<snoowrap.Comment>} */
         var lastComment = await r.getComment(lastCommentID).expandReplies({limit: 10, depth: 1});
         var moreComments = lastComment.replies.length > 0;
-        if (!moreComments) console.log('no more comments');
+        if (!moreComments) {
+            console.log('no more comments');
+            errors++
+        }
         var restart = false;
         while (moreComments) {
             if (lastComment.replies.length == 1) {               //if only one reply
@@ -134,7 +137,7 @@ async function pullComments() {
         console.error(err);
     } finally {
         if (errors > 10) restart = true;
-        if (restart) softRestart();
+        if (restart) softRestart(true);
         else setTimeout(pullComments, 1200);
     }
 }
@@ -157,7 +160,14 @@ async function pushToDB(c) {
             throw console.error('sql INSERT query error')
         });
 }
-async function softRestart() {
+function softRestart(rollback) {
+    if (rollback) {
+        pool.query('SELECT timestamp FROM ' +
+                'comments ORDER BY timestamp DESC LIMIT 5;')
+            .then(q => {
+                pool.query('DELETE FROM comments WHERE timestamp > ' + q[4].timestamp + ';')
+            })
+    }
     sr++;
     console.log(sr + ' soft restarting...');
     script = scriptCopy;
@@ -165,6 +175,6 @@ async function softRestart() {
     lastCommentID = '';
     errors = 0;
     r = new snoowrap(login);
-    await conn.release();
+    conn.release();
     setTimeout(main(), 60000);
 }
