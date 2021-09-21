@@ -176,5 +176,5 @@ function softRestart(rollback) {
     errors = 0;
     r = new snoowrap(login);
     conn.release();
-    setTimeout(main(), 60000);
+    setTimeout(main, 60000);
 }
