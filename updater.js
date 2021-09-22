@@ -119,7 +119,6 @@ async function pullComments() {
                     }
                     if (validReplies.length == 0) {
                         console.warn(sr + ' multiple valid replies - no valid reply replies');
-                        errors++;
                         moreComments = false;
                     } else if (validReplies.length > 1) {
                         console.error(sr + ' multiple valid replies - multiple valid reply replies');
@@ -169,12 +168,12 @@ function softRestart(rollback) {
             })
     }
     sr++;
-    console.log(sr + ' soft restarting...');
+    console.error(sr + ' soft restarting...');
     script = scriptCopy;
     written = '';
     lastCommentID = '';
     errors = 0;
     r = new snoowrap(login);
     conn.release();
-    setTimeout(main, 60000);
+    setTimeout(main, 10000);
 }
